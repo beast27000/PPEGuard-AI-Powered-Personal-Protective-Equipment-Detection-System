@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPEGuard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.5/dist/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.53.0/dist/apexcharts.min.js"></script>
+    <script>
+        // Fallback to local ApexCharts if CDN fails
+        if (typeof ApexCharts === 'undefined') {
+            document.write('<script src="/static/apexcharts.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .hidden { display: none; }
+        .dark { background-color: #1f2937; color: white; }
+        .dark .bg-white { background-color: #374151; }
+        .dark .bg-gray-100 { background-color: #1f2937; }
+        .dark .text-gray-800 { color: white; }
+        .progress-container { margin-top: 10px; }
+        .loading { color: #4b5563; font-style: italic; }
+        .navbar { background: linear-gradient(90deg, #1e3a8a, #3b82f6); }
+        .dark .navbar { background: linear-gradient(90deg, #4b5563, #6b7280); }
+        .card-hover { transition: transform 0.3s; }
+        .card-hover:hover { transform: translateY(-5px); }
+        .blog-content { max-width: 900px; margin: 0 auto; }
+        .tooltip { position: absolute; z-index: 50; }
+        .sample-strip { display: flex; overflow-x: auto; gap: 1rem; padding: 1rem; }
+        .sample-card { 
+            flex: 0 0 auto; 
+            width: 200px; 
+            height: 200px; 
+            background: #ffffff; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            overflow: hidden;
+            text-align: center;
+        }
+        .dark .sample-card { background: #374151; }
+        .sample-card img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            border-radius: 12px; 
+        }
+        .section-title { color: #1e3a8a; }
+        .highlight-box { background-color: #f0f4f8; border-left: 4px solid #3b82f6; padding: 1rem; margin: 1rem 0; }
+        .profile-img { 
+            width: 150px; 
+            height: 150px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            border: 4px solid #3b82f6; 
+            margin-bottom: 1.5rem; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 transition-colors duration-300">
+    <!-- Navigation Bar -->
+    <nav class="navbar fixed top-0 left-0 w-full z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-white">PPEGuard</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="showScreen('login')" class="text-white hover:text-gray-200 font-medium">Home</button>
+                    <button onclick="showScreen('about')" class="text-white hover:text-gray-200 font-medium">About Us</button>
+                    <button onclick="showScreen('description')" class="text-white hover:text-gray-200 font-medium">Description</button>
+                    <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded bg-gray-200 dark:bg-gray-700">🌙</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="pt-20">
+        <!-- Login Screen -->
+        <div id="login-screen" class="flex items-center justify-center min-h-screen">
+            <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md card-hover">
+                <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">PPEGuard</h1>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Employee ID</label>
+                    <input id="employee-id" type="text" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Department</label>
+                    <select id="department" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Admin">Admin</option>
+                        <option value="Maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Login</button>
+                <button onclick="showScreen('admin')" class="w-full mt-3 bg-gray-500 text-white p-3 rounded-lg hover:bg-gray-600 transition">Admin Dashboard</button>
+            </div>
+        </div>
+
+        <!-- Selection Screen -->
+        <div id="selection-screen" class="hidden flex items-center justify-center min-h-screen">
+            <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md card-hover">
+                <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Select Detection Preferences</h1>
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Target Class</label>
+                    <select id="target-class" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Hardhat">Hardhat</option>
+                        <option value="NO-Hardhat">NO-Hardhat</option>
+                        <option value="Safety Vest">Safety Vest</option>
+                        <option value="NO-Safety Vest">NO-Safety Vest</option>
+                        <option value="Gloves">Gloves</option>
+                        <option value="NO-Gloves">NO-Gloves</option>
+                        <option value="Goggles">Goggles</option>
+                        <option value="NO-Goggles">NO-Goggles</option>
+                        <option value="Mask">Mask</option>
+                        <option value="NO-Mask">NO-Mask</option>
+                        <option value="Fall-Detected">Fall-Detected</option>
+                        <option value="Person">Person</option>
+                    </select>
+                </div>
+                <div class="mb-6">
+                    <label class="block mb-2 text-sm font-medium text-gray-700">Model</label>
+                    <select id="model" class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="CustomCNN">CustomCNN</option>
+                        <option value="ResNet18">ResNet18</option>
+                        <option value="EfficientNet">EfficientNet</option>
+                    </select>
+                </div>
+                <button onclick="handleProceed()" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Proceed to Detection</button>
+                <button onclick="showScreen('login')" class="w-full mt-3 bg-gray-500 text-white p-3 rounded-lg hover:bg-gray-600 transition">Back to Login</button>
+            </div>
+        </div>
+
+        <!-- Main Detection Screen -->
+        <div id="main-screen" class="hidden container mx-auto p-4">
+            <div class="flex justify-between items-center mb-6">
+                <div id="user-info" class="text-lg font-semibold text-gray-800"></div>
+                <button onclick="showScreen('login')" class="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition">Logout</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-xl card-hover">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Video Feed</h2>
+                    <img id="video-feed" src="" alt="Video Feed" class="w-full h-auto hidden rounded-lg">
+                    <div id="camera-off" class="flex items-center justify-center h-96 bg-gray-800 text-white rounded-lg">Camera Off</div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-xl card-hover">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Real-time PPE Stats</h2>
+                    <div id="stats-chart" class="h-80"></div>
+                    <p id="status" class="mt-4 font-semibold text-gray-700">Status: No status detected yet</p>
+                    <p id="session-time" class="text-gray-600">Session Time: 00:00:00</p>
+                </div>
+            </div>
+            <div class="mt-6 flex flex-wrap gap-4">
+                <button onclick="startCamera()" class="bg-green-500 text-white p-3 rounded-lg hover:bg-green-600 transition">Start Camera</button>
+                <button onclick="stopCamera()" class="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition">Stop Camera</button>
+                <label class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition cursor-pointer">
+                    Upload Video
+                    <input id="video-upload" type="file" accept="video/*" onchange="uploadVideo(event)" class="hidden">
+                </label>
+                <button onclick="testSamples()" class="bg-purple-500 text-white p-3 rounded-lg hover:bg-purple-600 transition">Test Random Samples</button>
+            </div>
+            <!-- Sample Images Strip -->
+            <div id="sample-strip" class="hidden mt-6 bg-white p-4 rounded-lg shadow-xl card-hover">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">Tested Sample Images</h2>
+                <div id="sample-images" class="sample-strip"></div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard Screen -->
+        <div id="admin-screen" class="hidden container mx-auto p-4">
+            <div class="bg-white p-8 rounded-lg shadow-xl card-hover">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+                    <button onclick="showScreen('login')" class="bg-gray-500 text-white p-3 rounded-lg hover:bg-gray-600 transition">Back to Login</button>
+                </div>
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">Department</label>
+                        <select id="admin-dept" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="All">All</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">Date Range</label>
+                        <select id="admin-date" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="Last 7 Days">Last 7 Days</option>
+                            <option value="Last 30 Days">Last 30 Days</option>
+                            <option value="All Time">All Time</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-700">Flagged Violations Period</label>
+                        <select id="flag-date" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="Last 7 Days">Last 7 Days</option>
+                            <option value="Last 30 Days">Last 30 Days</option>
+                        </select>
+                    </div>
+                    <button onclick="fetchAdminStats()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Apply Filters</button>
+                    <button onclick="toggleFaultAnalysis()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Faults</button>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h2 class="text-xl font-bold mb-4 text-gray-800">Compliance Trends</h2>
+                        <div id="compliance-chart" class="h-80"></div>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold mb-4 text-gray-800">Acceptance Rate Trend</h2>
+                        <div id="acceptance-chart" class="h-80"></div>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Employee Details</h2>
+                    <p id="admin-loading" class="loading hidden">Loading...</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-200">
+                                    <th class="border p-3 text-left">Employee ID</th>
+                                    <th class="border p-3 text-left">Department</th>
+                                    <th class="border p-3 text-left">Sessions</th>
+                                    <th class="border p-3 text-left">Acceptance Rate</th>
+                                    <th class="border p-3 text-left">Flagged Items</th>
+                                    <th class="border p-3 text-left">Flagged Violations</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Fault Analysis Section -->
+                <div id="fault-analysis-section" class="hidden mt-6">
+                    <h2 class="text-xl font-bold mb-4 text-gray-800">Violation Log</h2>
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Department</label>
+                            <select id="fault-dept" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="All">All</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                        </div>
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-gray-700">Date Range</label>
+                            <select id="fault-date" class="p-3 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="Last 7 Days">Last 7 Days</option>
+                                <option value="Last 30 Days">Last 30 Days</option>
+                            </select>
+                        </div>
+                        <button onclick="fetchFaultAnalysis()" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Apply Fault Filters</button>
+                        <button onclick="downloadViolationLog()" class="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition">Download CSV</button>
+                    </div>
+                    <p id="fault-loading" class="loading hidden">Loading...</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-gray-200">
+                                    <th class="border p-3 text-left">Violation ID</th>
+                                    <th class="border p-3 text-left">Employee ID</th>
+                                    <th class="border p-3 text-left">Department</th>
+                                    <th class="border p-3 text-left">PPE Item</th>
+                                    <th class="border p-3 text-left">Session Date</th>
+                                    <th class="border p-3 text-left">Timestamp</th>
+                                    <th class="border p-3 text-left">Duration (s)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="violation-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Us Screen -->
+        <div id="about-screen" class="hidden container mx-auto p-4">
+            <div class="bg-white p-8 rounded-lg shadow-xl card-hover blog-content">
+                <h1 class="text-4xl font-bold mb-6 text-center section-title">About Me</h1>
+                <div class="text-center">
+                    <img id="profile-image" src="/static/vishvvesh_profile.png" alt="Vishvvesh Nagappan Profile" class="profile-img mx-auto">
+                </div>
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">Who I Am</h2>
+                    <p class="text-gray-600 mb-4">
+                        Hi! I’m Vishvvesh Nagappan, an enthusiastic tech explorer and a Computer Science Engineering student at SRM University, specializing in Artificial Intelligence and Machine Learning. I'm deeply passionate about building real-world AI solutions, with a strong foundation in machine learning, deep learning, full-stack development, and robotics.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        From building smart prosthetic legs to developing object detection pipelines like this PPE Detection Project, I thrive at the intersection of innovation and impact. I’ve always believed that technology should serve people—and that belief drives every project I take on.
+                    </p>
+                </section>
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">My Journey</h2>
+                    <p class="text-gray-600 mb-4">Over the past few years, I’ve:</p>
+                    <ul class="list-disc list-inside text-gray-600 mb-4">
+                        <li>Built end-to-end ML pipelines using PyCaret, TPOT, and Scikit-learn.</li>
+                        <li>Developed deep learning solutions with PyTorch, Keras, and OpenCV.</li>
+                        <li>Accelerated ML workflows on the GPU using NVIDIA CUDA, leveraging libraries such as cuML, cuDF, and CuPy to optimize performance and drastically reduce compute times for data preprocessing, model training, and inference.</li>
+                        <li>Designed and deployed full-stack web applications with React.js, Next.js, Node.js, and AWS (EC2, RDS, S3).</li>
+                        <li>Delivered interactive dashboards and profiling with YData Profiling and visualization tools.</li>
+                        <li>Mastered languages like Python, C++, C, Java (Swing & AWT), and JavaScript.</li>
+                    </ul>
+                    <p class="text-gray-600 mb-4">
+                        Through internships at CGI and Chipware Technologies, I’ve gained hands-on experience in MLOps, AutoML, and scalable software design. I also taught robotics, Python, and AI to school students as part of my volunteering work with the Learning Links Foundation, bringing advanced tech education to underserved communities.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        When I’m not coding, I contribute to university fests like Aarush as part of the Quality Assurance Committee, ensuring smooth operations and meticulous reporting. I’m also preparing to publish research on AI-driven lung cancer detection and AI in gaming.
+                    </p>
+                </section>
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">Current Focus</h2>
+                    <p class="text-gray-600 mb-4">
+                        I’ve been exploring GPU-accelerated machine learning pipelines using RAPIDS, with a strong emphasis on integrating tools like cuML for model training, cuDF for efficient GPU-based dataframe operations, and CuPy for NumPy-like GPU computing. These technologies have significantly enhanced the speed and scalability of my recent projects, including this PPE detection system.
+                    </p>
+                </section>
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">Connect with Me</h2>
+                    <ul class="list-none text-gray-600 mb-4">
+                        <li class="mb-2"><strong>Email:</strong> <a href="mailto:vishvvesh@gmail.com" class="text-blue-600 hover:underline">vishvvesh@gmail.com</a></li>
+                        <li class="mb-2"><strong>LinkedIn:</strong> <a href="https://linkedin.com/in/vishvvesh-nagappan-4b1760252" class="text-blue-600 hover:underline" target="_blank">linkedin.com/in/vishvvesh-nagappan-4b1760252</a></li>
+                        <li><strong>GitHub:</strong> <a href="https://github.com/beast27000" class="text-blue-600 hover:underline" target="_blank">github.com/beast27000</a></li>
+                    </ul>
+                </section>
+                <div class="text-center">
+                    <button onclick="showScreen('login')" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Back to Home</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description Screen -->
+        <div id="description-screen" class="hidden container mx-auto p-4">
+            <div class="bg-white p-8 rounded-lg shadow-xl card-hover blog-content">
+                <h1 class="text-4xl font-bold mb-6 text-center section-title">PPEGuard: Revolutionizing Workplace Safety</h1>
+
+                <!-- Why PPEGuard Section -->
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">Why We Need PPEGuard</h2>
+                    <p class="text-gray-600 mb-4">
+                        In industries such as construction, manufacturing, and mining, Personal Protective Equipment (PPE) like hardhats, safety vests, gloves, goggles, and masks is critical to ensuring worker safety. However, negligence in wearing PPE remains a significant issue. Workers may forget, underestimate risks, or find equipment uncomfortable, leading to hazardous situations. According to safety reports, non-compliance with PPE protocols contributes to thousands of workplace injuries annually, many of which are preventable.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        PPEGuard was created to address this challenge. Our mission is to protect workers by ensuring consistent PPE compliance through an innovative, AI-powered monitoring system. By automating detection and providing real-time alerts, PPEGuard reduces the risk of accidents and fosters a culture of safety in high-risk environments.
+                    </p>
+                    <div class="highlight-box">
+                        <p class="text-gray-700">
+                            <strong>Did You Know?</strong> Failure to wear PPE contributes to over 30% of workplace injuries in industrial settings. PPEGuard aims to bring this number down by ensuring no worker goes unprotected.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- What PPEGuard Does Section -->
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">What PPEGuard Does</h2>
+                    <p class="text-gray-600 mb-4">
+                        PPEGuard is a state-of-the-art system designed to monitor PPE compliance in real time. Using advanced deep learning models, it analyzes live video feeds or uploaded videos to detect whether workers are wearing essential PPE items, such as hardhats, safety vests, gloves, goggles, and masks. It can also identify unsafe conditions, like falls, and flag non-compliance instantly.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        What makes PPEGuard unique is its user-friendly interface and powerful AI capabilities. The system allows administrators to:
+                    </p>
+                    <ul class="list-disc list-inside text-gray-600 mb-4">
+                        <li>Monitor live video feeds with real-time PPE detection.</li>
+                        <li>Receive instant alerts for non-compliance or safety violations.</li>
+                        <li>Access detailed analytics through an admin dashboard, including compliance trends and violation logs.</li>
+                        <li>Upload videos for offline analysis or test random samples for quality assurance.</li>
+                    </ul>
+                    <p class="text-gray-600 mb-4">
+                        Built with scalability in mind, PPEGuard integrates seamlessly into existing workplace safety protocols, making it an ideal solution for industries prioritizing worker well-being.
+                    </p>
+                </section>
+
+                <!-- How It Works Section -->
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">How PPEGuard Works</h2>
+                    <p class="text-gray-600 mb-4">
+                        PPEGuard leverages three custom deep learning models—CustomCNN, ResNet18, and EfficientNet—trained to recognize PPE items with high accuracy. These models process video frames in real time, identifying whether workers are wearing the required equipment. The system uses a web-based interface powered by FastAPI, which displays live feeds, compliance statistics, and violation logs.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        A standout feature is its use of NVIDIA's CUDA technology, which accelerates image processing on GPUs. This ensures that PPEGuard can handle high-resolution video streams without lag, making it suitable for real-time monitoring in busy work environments. The system also supports multiple PPE categories and can be customized to focus on specific items, such as hardhats or gloves, depending on workplace needs.
+                    </p>
+                    <div class="highlight-box">
+                        <p class="text-gray-700">
+                            <strong>Real-Time Advantage:</strong> Thanks to CUDA acceleration, PPEGuard processes video frames in milliseconds, ensuring instant detection and alerts for safety violations.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Technical Backbone Section -->
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">The Technical Backbone: Training PPEGuard</h2>
+                    <p class="text-gray-600 mb-4">
+                        To create PPEGuard’s robust detection capabilities, we trained our three deep learning models on a massive dataset comprising nearly 50,000 images from five distinct sources, including specialized datasets for hardhats, gloves, goggles, safety vests, and a comprehensive PPE dataset. These images were annotated to identify 12 PPE-related classes, such as “Hardhat,” “NO-Hardhat,” “Safety Vest,” and “Fall-Detected.”
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        The training process utilized NVIDIA’s CUDA toolkit and an NVIDIA RTX 4060 graphics card, which significantly sped up the computation. CUDA enabled parallel processing of the large image dataset, reducing training time and allowing us to iterate quickly. We employed advanced techniques like:
+                    </p>
+                    <ul class="list-disc list-inside text-gray-600 mb-4">
+                        <li><strong>Mixed Precision Training:</strong> To optimize memory usage and speed up training without sacrificing accuracy.</li>
+                        <li><strong>Label Smoothing:</strong> To improve model generalization by reducing overconfidence in predictions.</li>
+                        <li><strong>Balanced Sampling:</strong> To ensure the models learned equally from all PPE classes, even those with fewer images.</li>
+                        <li><strong>Data Augmentation:</strong> Including random rotations, flips, and color adjustments to make the models robust to real-world variations.</li>
+                    </ul>
+                    <p class="text-gray-600 mb-4">
+                        Over 20 epochs with 100 iterations, our models achieved high accuracy and F1 scores, as logged in our PostgreSQL database. The training process was rigorous, but the results were worth it—PPEGuard can now detect PPE with precision in diverse lighting conditions and camera angles.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        We’re not stopping here. With more images and further training, we plan to enhance PPEGuard’s accuracy even further, ensuring it remains at the forefront of workplace safety technology.
+                    </p>
+                    <div class="highlight-box">
+                        <p class="text-gray-700">
+                            <strong>Tech Highlight:</strong> Training on an NVIDIA RTX 4060 with CUDA cut processing time by up to 50%, enabling us to handle 50,000 images efficiently.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- Conclusion Section -->
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold mb-4 section-title">Our Vision for PPEGuard</h2>
+                    <p class="text-gray-600 mb-4">
+                        PPEGuard is more than just a detection system—it’s a commitment to saving lives and preventing injuries. By combining cutting-edge AI with practical, user-friendly design, we aim to make workplaces safer and compliance effortless. Whether it’s a construction site or a factory floor, PPEGuard is here to ensure every worker is protected, every time.
+                    </p>
+                    <p class="text-gray-600 mb-4">
+                        Join us in our mission to revolutionize workplace safety. With PPEGuard, we’re building a future where accidents due to PPE non-compliance are a thing of the past.
+                    </p>
+                </section>
+
+                <!-- Back Button -->
+                <div class="text-center">
+                    <button onclick="showScreen('login')" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition">Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:8000');
+        let statsChart, complianceChart, acceptanceChart;
+        let isDark = false;
+        let employeeViolations = {}; // Cache for tooltip data
+
+        socket.on('frame', (data) => {
+            document.getElementById('video-feed').src = `data:image/jpeg;base64,${data.frame}`;
+            document.getElementById('video-feed').classList.remove('hidden');
+            document.getElementById('camera-off').classList.add('hidden');
+            updateStatsChart(data.stats, document.getElementById('target-class').value);
+            document.getElementById('status').textContent = `Status: ${data.status}`;
+            document.getElementById('session-time').textContent = `Session Time: ${data.sessionTime}`;
+        });
+
+        socket.on('error', (data) => {
+            alert(data.message);
+        });
+
+        function showScreen(screen) {
+            document.querySelectorAll('#login-screen, #selection-screen, #main-screen, #admin-screen, #about-screen, #description-screen').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`${screen}-screen`).classList.remove('hidden');
+            // Reset fault analysis section when leaving admin screen
+            if (screen !== 'admin') {
+                document.getElementById('fault-analysis-section').classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            isDark = !isDark;
+            document.body.classList.toggle('dark');
+            document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+        }
+
+        async function handleLogin() {
+            const employeeId = document.getElementById('employee-id').value.trim();
+            const department = document.getElementById('department').value;
+            if (!employeeId) {
+                alert('Please enter your Employee ID');
+                return;
+            }
+            if (!['Admin', 'Maintenance'].includes(department)) {
+                alert('Please select a valid department');
+                return;
+            }
+            try {
+                await axios.post('http://localhost:8000/login', { employee_id: employeeId, department });
+                document.getElementById('user-info').textContent = `Employee ID: ${employeeId} | Department: ${department} | Target: ${document.getElementById('target-class').value} | Model: ${document.getElementById('model').value}`;
+                showScreen('selection');
+            } catch (error) {
+                console.error('Login error:', error);
+                alert(`Login failed: ${error.response?.data?.detail || error.message}`);
+            }
+        }
+
+        async function handleProceed() {
+            const targetClass = document.getElementById('target-class').value;
+            const model = document.getElementById('model').value;
+            try {
+                await axios.post('http://localhost:8000/select', { target_class: targetClass, model });
+                document.getElementById('user-info').textContent = `Employee ID: ${document.getElementById('employee-id').value} | Department: ${document.getElementById('department').value} | Target: ${targetClass} | Model: ${model}`;
+                showScreen('main');
+            } catch (error) {
+                console.error('Proceed error:', error);
+                alert(`Failed to proceed: ${error.response?.data?.detail || error.message}`);
+            }
+        }
+
+        async function startCamera() {
+            socket.emit('start_camera');
+        }
+
+        async function stopCamera() {
+            socket.emit('stop_camera');
+            document.getElementById('video-feed').classList.add('hidden');
+            document.getElementById('camera-off').classList.remove('hidden');
+        }
+
+        async function uploadVideo(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const progressBar = document.createElement('div');
+            progressBar.className = 'w-full bg-gray-200 rounded progress-container';
+            progressBar.innerHTML = '<div id="progress" class="bg-blue-500 h-4 rounded" style="width: 0%"></div>';
+            document.getElementById('main-screen').appendChild(progressBar);
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const response = await axios.post('http://localhost:8000/upload_video', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                    timeout: 300000,
+                    onUploadProgress: (progressEvent) => {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        document.getElementById('progress').style.width = `${percentCompleted}%`;
+                    }
+                });
+                alert(response.data.message);
+                updateStatsChart(response.data.stats, document.getElementById('target-class').value);
+            } catch (error) {
+                console.error('Video upload error:', error);
+                let errorMessage = 'Video upload failed';
+                if (error.response) {
+                    errorMessage += `: ${error.response.data.detail || error.response.statusText}`;
+                } else if (error.request) {
+                    errorMessage += ': No response from server';
+                } else {
+                    errorMessage += `: ${error.message}`;
+                }
+                alert(errorMessage);
+            } finally {
+                progressBar.remove();
+            }
+        }
+
+        async function testSamples() {
+            try {
+                const response = await axios.get('http://localhost:8000/test_samples');
+                alert(response.data.message);
+                updateStatsChart(response.data.stats, document.getElementById('target-class').value);
+                const sampleImages = response.data.sample_images || [];
+                const sampleImagesDiv = document.getElementById('sample-images');
+                sampleImagesDiv.innerHTML = sampleImages.length ? sampleImages.map(img => {
+                    const isFilename = /\.(jpg|jpeg|png)$/i.test(img.label);
+                    return `
+                        <div class="sample-card">
+                            <img src="data:image/jpeg;base64,${img.data}" alt="Sample Image">
+                            ${!isFilename ? `<p class="text-sm font-medium">${img.label}</p>` : ''}
+                        </div>
+                    `;
+                }).join('') : '<p class="text-gray-600">No sample images available</p>';
+                document.getElementById('sample-strip').classList.remove('hidden');
+            } catch (error) {
+                console.error('Test samples error:', error);
+                let errorMessage = 'Test failed';
+                if (error.response) {
+                    errorMessage += `: ${error.response.data.detail || error.response.statusText}`;
+                } else if (error.request) {
+                    errorMessage += ': No response from server';
+                } else {
+                    errorMessage += `: ${error.message}`;
+                }
+                alert(errorMessage);
+            }
+        }
+
+        async function viewFlaggedViolations(employeeId) {
+            const dateRange = document.getElementById('flag-date').value;
+            try {
+                const response = await axios.get('http://localhost:8000/faults', {
+                    params: { employee_id: employeeId, date_range: dateRange },
+                    timeout: 5000
+                });
+                const faults = response.data.faults || [];
+                if (faults.length === 0) {
+                    alert(`No violations found for Employee ${employeeId} in the ${dateRange.toLowerCase()}.`);
+                    return;
+                }
+                const summary = faults.map(f => 
+                    `PPE: ${f.ppe_item}, Date: ${f.session_date} ${f.timestamp}, Duration: ${parseFloat(f.duration_seconds).toFixed(1)}s`
+                ).join('\n');
+                alert(`Violations for Employee ${employeeId} (${dateRange}):\n${summary}`);
+            } catch (error) {
+                console.error('Fetch violations error:', error);
+                alert(`Failed to fetch violations: ${error.response?.data?.detail || error.message}`);
+            }
+        }
+
+        async function fetchViolationTooltip(employeeId) {
+            if (employeeViolations[employeeId]) {
+                return employeeViolations[employeeId];
+            }
+            try {
+                const response = await axios.get('http://localhost:8000/faults', {
+                    params: { employee_id: employeeId, date_range: 'Last 7 Days' },
+                    timeout: 5000
+                });
+                const faults = response.data.faults || [];
+                employeeViolations[employeeId] = faults;
+                return faults;
+            } catch (error) {
+                console.error('Fetch tooltip violations error:', error);
+                return [];
+            }
+        }
+
+        function updateStatsChart(stats, targetClass) {
+            if (typeof ApexCharts === 'undefined') {
+                console.error('ApexCharts is not loaded');
+                alert('Failed to update stats chart: ApexCharts library is not loaded. Please ensure apexcharts.min.js is in the static folder or check your internet connection.');
+                return;
+            }
+            try {
+                const labels = Object.keys(stats).filter(k => stats[k] > 0);
+                const data = Object.values(stats).filter(v => v > 0);
+                const options = {
+                    chart: { type: 'pie', height: '100%' },
+                    series: data.length ? data : [1],
+                    labels: labels.length ? labels : ['No Data'],
+                    colors: labels.map(l => l === 'Accepted' ? '#00FF00' : '#FF0000'),
+                    title: { text: `PPE Compliance (${targetClass})`, align: 'center' },
+                    legend: { position: 'top' },
+                    noData: { text: 'No Data Available' }
+                };
+                if (statsChart) statsChart.destroy();
+                statsChart = new ApexCharts(document.querySelector('#stats-chart'), options);
+                statsChart.render();
+            } catch (error) {
+                console.error('Error updating stats chart:', error);
+                alert('Failed to update stats chart: ' + error.message);
+            }
+        }
+
+        async function fetchAdminStats() {
+            const dept = document.getElementById('admin-dept').value;
+            const dateRange = document.getElementById('admin-date').value;
+            const loading = document.getElementById('admin-loading');
+            loading.classList.remove('hidden');
+            try {
+                const response = await axios.get('http://localhost:8000/admin_stats', {
+                    params: { department: dept, date_range: dateRange },
+                    timeout: 10000
+                });
+                const { compliance, employees } = response.data;
+
+                // Compliance Chart (Pie)
+                const complianceLabels = compliance.map(c => c.status).filter((_, i) => compliance[i].total > 0);
+                const complianceData = compliance.map(c => c.total).filter(t => t > 0);
+                const complianceOptions = {
+                    chart: { type: 'pie', height: '100%' },
+                    series: complianceData.length ? complianceData : [1],
+                    labels: complianceLabels.length ? complianceLabels : ['No Data'],
+                    colors: complianceLabels.map(l => l === 'Accepted' ? '#00FF00' : l === 'Flagged' ? '#FF0000' : '#CCCCCC'),
+                    title: { text: 'Compliance Trends', align: 'center' },
+                    legend: { show: !!complianceLabels.length, position: 'top' },
+                    noData: { text: 'No Data Available' }
+                };
+                if (complianceChart) complianceChart.destroy();
+                complianceChart = new ApexCharts(document.querySelector('#compliance-chart'), complianceOptions);
+                complianceChart.render();
+
+                // Acceptance Rate Chart (Bar)
+                const empLabels = employees.filter(e => e.session_count > 0).map(e => e.employee_id);
+                const empData = employees.filter(e => e.session_count > 0).map(e => e.acceptance_rate);
+                const acceptanceOptions = {
+                    chart: { type: 'bar', height: '100%' },
+                    series: [{ name: 'Acceptance Rate', data: empData.length ? empData : [0] }],
+                    xaxis: { categories: empLabels.length ? empLabels : ['No Data'] },
+                    title: { text: 'Acceptance Rate Trend', align: 'center' },
+                    yaxis: { min: 0, max: 100 },
+                    colors: ['#00FF00'],
+                    noData: { text: 'No Data Available' }
+                };
+                if (acceptanceChart) acceptanceChart.destroy();
+                acceptanceChart = new ApexCharts(document.querySelector('#acceptance-chart'), acceptanceOptions);
+                acceptanceChart.render();
+
+                // Employee Table with Flagged Button and Tooltip
+                const tableBody = document.getElementById('employee-table');
+                tableBody.innerHTML = employees.length ? employees.map(emp => `
+                    <tr class="hover:bg-gray-100" data-employee-id="${emp.employee_id}">
+                        <td class="border p-3">${emp.employee_id}</td>
+                        <td class="border p-3">${emp.department}</td>
+                        <td class="border p-3">${emp.session_count}</td>
+                        <td class="border p-3">${emp.acceptance_rate.toFixed(1)}</td>
+                        <td class="border p-3">${emp.flagged_items || 'None'}</td>
+                        <td class="border p-3">
+                            <button onclick="viewFlaggedViolations('${emp.employee_id}  class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition text-sm">Flagged</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="6" class="border p-3 text-center">No employee data</td></tr>';
+
+                // Add tooltip hover events
+                document.querySelectorAll('#employee-table tr').forEach(row => {
+                    const employeeId = row.dataset.employeeId;
+                    if (!employeeId) return;
+                    row.addEventListener('mouseenter', async (e) => {
+                        const faults = await fetchViolationTooltip(employeeId);
+                        if (faults.length === 0) return;
+                        const summary = faults.map(f => 
+                            `<p>${f.session_date} ${f.timestamp}: ${f.ppe_item} (${parseFloat(f.duration_seconds).toFixed(1)}s)</p>`
+                        ).join('');
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip bg-gray-800 text-white text-sm p-2 rounded shadow-lg';
+                        tooltip.innerHTML = `<p><strong>Violations for ${employeeId}</strong></p>${summary}`;
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                        document.body.appendChild(tooltip);
+                    });
+                    row.addEventListener('mousemove', (e) => {
+                        const tooltip = document.querySelector('.tooltip');
+                        if (tooltip) {
+                            tooltip.style.left = `${e.pageX + 10}px`;
+                            tooltip.style.top = `${e.pageY + 10}px`;
+                        }
+                    });
+                    row.addEventListener('mouseleave', () => {
+                        const tooltip = document.querySelector('.tooltip');
+                        if (tooltip) tooltip.remove();
+                    });
+                });
+            } catch (error) {
+                console.error('Admin stats error:', error);
+                alert(`Failed to fetch admin stats: ${error.response?.data?.detail || error.message}`);
+                document.getElementById('employee-table').innerHTML = '<tr><td colspan="6" class="border p-3 text-center">Error loading data</td></tr>';
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function toggleFaultAnalysis() {
+            const faultSection = document.getElementById('fault-analysis-section');
+            const adminStats = document.querySelector('.bg-white.p-8.rounded-lg.shadow-xl.card-hover > .grid');
+            const employeeTable = document.querySelector('.bg-white.p-8.rounded-lg.shadow-xl.card-hover > .mt-6');
+            if (faultSection.classList.contains('hidden')) {
+                faultSection.classList.remove('hidden');
+                adminStats.classList.add('hidden');
+                employeeTable.classList.add('hidden');
+                fetchFaultAnalysis();
+            } else {
+                faultSection.classList.add('hidden');
+                adminStats.classList.remove('hidden');
+                employeeTable.classList.remove('hidden');
+            }
+        }
+
+        async function fetchFaultAnalysis() {
+            const dept = document.getElementById('fault-dept').value;
+            const dateRange = document.getElementById('fault-date').value;
+            const loading = document.getElementById('fault-loading');
+            const tableBody = document.getElementById('violation-table');
+            loading.classList.remove('hidden');
+            tableBody.innerHTML = '';
+            try {
+                const response = await axios.get('http://localhost:8000/fault_analysis', {
+                    params: { department: dept, date_range: dateRange },
+                    timeout: 10000
+                });
+                const violations = response.data.violations || [];
+                tableBody.innerHTML = violations.length ? violations.map(v => `
+                    <tr class="hover:bg-gray-100" data-violation-id="${v.id}">
+                        <td class="border p-3">${v.id}</td>
+                        <td class="border p-3">${v.employee_id}</td>
+                        <td class="border p-3">${v.department}</td>
+                        <td class="border p-3">${v.ppe_item}</td>
+                        <td class="border p-3">${v.session_date}</td>
+                        <td class="border p-3">${v.timestamp}</td>
+                        <td class="border p-3">${parseFloat(v.duration_seconds).toFixed(1)}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="7" class="border p-3 text-center">No violations found</td></tr>';
+
+                document.querySelectorAll('#violation-table tr').forEach(row => {
+                    const violationId = row.dataset.violationId;
+                    if (!violationId) return;
+                    row.addEventListener('mouseenter', async (e) => {
+                        const violation = violations.find(v => v.id == violationId);
+                        if (!violation) return;
+                        const tooltip = document.createElement('div');
+                        tooltip.className = 'tooltip bg-gray-800 text-white text-sm p-2 rounded shadow-lg';
+                        tooltip.innerHTML = `
+                            <p><strong>Violation Details</strong></p>
+                            <p>Employee: ${violation.employee_id}</p>
+                            <p>PPE: ${violation.ppe_item}</p>
+                            <p>Start: ${violation.session_date} ${violation.timestamp}</p>
+                            <p>Duration: ${parseFloat(violation.duration_seconds).toFixed(1)}s</p>
+                        `;
+                        tooltip.style.left = `${e.pageX + 10}px`;
+                        tooltip.style.top = `${e.pageY + 10}px`;
+                        document.body.appendChild(tooltip);
+                    });
+                    row.addEventListener('mousemove', (e) => {
+                        const tooltip = document.querySelector('.tooltip');
+                        if (tooltip) {
+                            tooltip.style.left = `${e.pageX + 10}px`;
+                            tooltip.style.top = `${e.pageY + 10}px`;
+                        }
+                    });
+                    row.addEventListener('mouseleave', () => {
+                        const tooltip = document.querySelector('.tooltip');
+                        if (tooltip) tooltip.remove();
+                    });
+                });
+            } catch (error) {
+                console.error('Fault analysis error:', error);
+                let errorMessage = 'Failed to fetch fault analysis';
+                if (error.response) {
+                    errorMessage += `: ${error.response.data.detail || error.response.statusText}`;
+                } else if (error.request) {
+                    errorMessage += ': No response from server. Please check if the server is running.';
+                } else {
+                    errorMessage += `: ${error.message}`;
+                }
+                alert(errorMessage);
+                tableBody.innerHTML = '<tr><td colspan="7" class="border p-3 text-center">Error loading data</td></tr>';
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        function downloadViolationLog() {
+            const dept = document.getElementById('fault-dept').value;
+            const dateRange = document.getElementById('fault-date').value;
+            axios.get('http://localhost:8000/fault_analysis', {
+                params: { department: dept, date_range: dateRange },
+                timeout: 10000
+            }).then(response => {
+                const violations = response.data.violations || [];
+                if (!violations.length) {
+                    alert('No violations to download');
+                    return;
+                }
+                const headers = ['Violation ID', 'Employee ID', 'Department', 'PPE Item', 'Session Date', 'Timestamp', 'Duration (s)'];
+                const csvContent = [
+                    headers.join(','),
+                    ...violations.map(v => [
+                        v.id,
+                        v.employee_id,
+                        v.department,
+                        v.ppe_item,
+                        v.session_date,
+                        v.timestamp,
+                        parseFloat(v.duration_seconds).toFixed(1)
+                    ].join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `violation_log_${dept}_${dateRange.replace(/\s/g, '_')}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }).catch(error => {
+                console.error('Download error:', error);
+                let errorMessage = 'Failed to download violation log';
+                if (error.response) {
+                    errorMessage += `: ${error.response.data.detail || error.response.statusText}`;
+                } else if (error.request) {
+                    errorMessage += ': No response from server';
+                } else {
+                    errorMessage += `: ${error.message}`;
+                }
+                alert(errorMessage);
+            });
+        }
+
+        console.log('ApexCharts loading status:', typeof ApexCharts !== 'undefined' ? 'Loaded' : 'Not loaded');
+    </script>
+    <script src="/static/admin_password.js"></script>
+</body>
+</html>
