@@ -17,6 +17,12 @@ PPEGuard is an advanced, AI-driven system designed to enhance workplace safety b
 * [License](#license)
 * [Contact](#contact)
 
+
+
+![WhatsApp Image 2025-07-07 at 02 32 21_d2720b47](https://github.com/user-attachments/assets/47bfbbd4-354f-47ff-9ae7-ba59a6156648)
+
+
+
 ## Project Overview
 
 PPEGuard addresses the critical issue of PPE non-compliance in high-risk industries, where failure to wear PPE contributes to over 30% of workplace injuries. By integrating state-of-the-art deep learning models with a scalable web application, PPEGuard automates PPE detection, flags violations, and provides actionable insights through an admin dashboard.
