@@ -65,6 +65,18 @@ The PPEGuard web interface, built with HTML, Tailwind CSS, and JavaScript, is de
 * **About Us Page:** Introduces the developer, Vishvvesh Nagappan, outlining his background, skills, and contact information. (Image: Screenshot of About Us Page)
 * **Description Page:** Details the project's motivation, core functionality, technical backbone (including training process and CUDA/RAPIDS utilization), and future vision. (Image: Screenshot of Description Page)
 
+![WhatsApp Image 2025-07-07 at 02 32 21_48223340](https://github.com/user-attachments/assets/89f61e3b-f388-46e3-804b-a6e9b4c5a3e8)
+![WhatsApp Image 2025-07-07 at 02 32 48_4c0f2172](https://github.com/user-attachments/assets/4ae1eea2-2e54-4268-ac98-1121fe22c4b1)
+![WhatsApp Image 2025-07-07 at 02 33 40_6dbe92d3](https://github.com/user-attachments/assets/594ae588-2c22-458c-9a1b-cc6eebf54b22)
+![WhatsApp Image 2025-07-07 at 02 33 55_7d575aa2](https://github.com/user-attachments/assets/6cd82a73-fa1a-4aaf-b9d9-5e92b501d4c0)
+![WhatsApp Image 2025-07-07 at 02 35 00_cbbf7bcf](https://github.com/user-attachments/assets/ac05290e-a722-4093-adb6-6a20f69490d3)
+![WhatsApp Image 2025-07-07 at 02 35 49_cf20a674](https://github.com/user-attachments/assets/997921b8-b6c5-42fd-9eda-90d999f1b8e2)
+![WhatsApp Image 2025-07-07 at 02 36 50_e94d3ec4](https://github.com/user-attachments/assets/b0368477-ead1-40e6-a874-68051915910c)
+
+
+
+
+
 ### 3. Backend Logic
 
 The backend, powered by FastAPI and Python, orchestrates the entire system:
