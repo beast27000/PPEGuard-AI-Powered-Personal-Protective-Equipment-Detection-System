@@ -1,4 +1,4 @@
-# PPEGuard: AI-Powered Personal Protective Equipment Detection System
+# PPEGuard: AI-Powered Personal Protective Equipment Detection System (Made Using CUDA)
 
 PPEGuard is an advanced, AI-driven system designed to enhance workplace safety by monitoring Personal Protective Equipment (PPE) compliance in real-time. Leveraging deep learning models trained with NVIDIA RTX 4060 GPU, CUDA, and the RAPIDS library, PPEGuard detects essential PPE items like hardhats, safety vests, gloves, goggles, and masks in live video feeds or uploaded videos. It provides real-time analytics, violation logging, and a user-friendly web interface for both employees and administrators. This project, developed by Vishvvesh Nagappan as part of a Computer Science Engineering initiative at SRM University, focuses on practical AI and machine learning applications in industrial safety.
 
